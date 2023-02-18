@@ -16,19 +16,19 @@
 #include QMK_KEYBOARD_H
 
 enum layer_names {
+    _COLEMAK,
     _BASE,
-    _LOWER,
-    _RAISE,
-    _ADJUST,
     _SYM,
-    _COLEMAK
+    _NUM,
+    _FUNC,
+    _ADJUST
 };
 
-#define LOWER  MO(_LOWER)
-#define RAISE  MO(_RAISE)
+// #define LOWER  MO(_LOWER)
+// #define RAISE  MO(_RAISE)
 #define ADJUST MO(_ADJUST)
-#define COLEMAK set_single_persistent_default_layer(_COLEMAK)
-#define QWERTY set_single_persistent_default_layer(_BASE)
+#define COLEMAK DF(_COLEMAK)
+#define QWERTY DF(_BASE)
 
 enum td_keycodes {
     OSM_LS_L1, // one-shot shift tap, layer 1 doubletap
@@ -63,9 +63,9 @@ void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data);
 
 #define OSM_LS OSM(MOD_LSFT)
 #define WINTAB LGUI(KC_TAB)
-#define MOD1 LT(1,KC_MINS)
-#define MOD2 LT(14, KC_BSPC)
-#define MOD3 LT(13, KC_DEL)
+#define MOD1 LT(1, KC_MINS)
+#define MOD2 LT(_NUM, KC_BSPC)
+#define MOD3 LT(_FUNC, KC_DEL)
 #define MOD4 LT(2, KC_QUOT)
 #define TD_OSM_LSL1 TD(OSM_LS_L1)
 #define TD_ENT_CTRL TD(ENT_CTRL)
@@ -77,16 +77,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_TAB,   KC_A,     KC_S,     KC_D,     KC_F,      KC_G,               KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,
     TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_V,      KC_B,               KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,  TD_ENT_CTRL,
                                     KC_LGUI,   TD_OSM_LSL1,    KC_SPC,   MOD2,    MOD3
-  ),
+),
 
-[14] = LAYOUT_reviung41(
+[_COLEMAK] = LAYOUT_reviung41(
+KC_ESC,   KC_Q,     KC_W,     KC_F,     KC_P,      KC_B,               KC_J,     KC_L,     KC_U,     KC_Y,     KC_SCLN,     KC_LALT,
+KC_TAB,   KC_A,     KC_R,     KC_S,     KC_T,      KC_G,               KC_M,     KC_N,     KC_E,     KC_I,     KC_O,  KC_QUOT,
+TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_D,      KC_V,           KC_K,     KC_H,     KC_COMM,  KC_DOT,   KC_SLSH,  TD_ENT_CTRL,
+                                KC_LGUI,   TD_OSM_LSL1,    KC_SPC,   MOD2,    MOD3
+),
+
+[_NUM] = LAYOUT_reviung41(
     _______,  _______,  KC_7,     KC_8,     KC_9,   _______,           KC_HOME,  KC_PGUP,  KC_UP,    KC_PGDN,  _______,   ADJUST,
     _______,  _______,  KC_4,     KC_5,     KC_6,   _______,           KC_END,   KC_LEFT,  KC_DOWN,  KC_RGHT,  _______,  KC_LSHIFT,
     _______,  _______,  KC_1,     KC_2,     KC_3,   _______,           KC_INSERT,  _______, _______, _______, _______,  TD_ENT_CTRL,
                                             KC_0,      KC_0,  KC_PDOT,   _______,  _______
   ),
 
-[13] = LAYOUT_reviung41(
+[_FUNC] = LAYOUT_reviung41(
     KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,            XXXXXXX,  KC_VOLD,  KC_VOLU,  KC_MUTE,  XXXXXXX,  XXXXXXX,
     KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,           XXXXXXX,  KC_MPRV,  KC_MPLY,  KC_MNXT,  XXXXXXX,  XXXXXXX,
     KC_F13,   KC_F14,   KC_F15,   KC_F16,   KC_F17,   KC_F18,           XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
@@ -98,35 +105,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______,   XXXXXXX, KC_AT,    KC_LCBR,  KC_MINS,   KC_BSLS,            KC_SLSH,  KC_PPLS, KC_RCBR, KC_PERC, KC_COLN,  XXXXXXX,
     _______,   XXXXXXX, KC_HASH,  KC_LBRC,  KC_GRV,    KC_QUOT,            KC_DQUO,  KC_EQL,  KC_RBRC, KC_AMPR, KC_QUES,  _______,
                                             _______,   _______,  XXXXXXX,  _______,  _______
-  ),
-
-//   [_LOWER] = LAYOUT_reviung41(
-//     _______,  KC_EXLM,  KC_AT,    KC_HASH,  KC_DLR,    KC_PERC,            KC_CIRC,  KC_AMPR,  KC_ASTR,  KC_LPRN,  KC_RPRN,  KC_DEL,
-//     _______,  KC_UNDS,  KC_PLUS,  KC_LCBR,  KC_RCBR,   KC_PIPE,            KC_LEFT,  KC_DOWN,  KC_UP,    KC_RGHT,  KC_GRV,   KC_TILD,
-//     _______,  KC_ESC,   KC_LGUI,  KC_LALT,  KC_CAPS,   KC_DQUO,            KC_HOME,  KC_END,   KC_PGUP,  KC_PGDN,  KC_PSCR,  RSFT_T(KC_SPC),
-//                                             _______,   _______,  KC_ENT,   _______,  _______
-//   ),
-
-//   [_RAISE] = LAYOUT_reviung41(
-//     _______,  KC_1,     KC_2,     KC_3,     KC_4,      KC_5,               KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_DEL,
-//     _______,  KC_MINS,  KC_EQL,   KC_LBRC,  KC_RBRC,   KC_BSLS,            KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,
-//     _______,  KC_ESC,   KC_RGUI,  KC_RALT,  KC_CAPS,   KC_QUOT,            KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,
-//                                             _______,   _______,  KC_BSPC,  _______,  _______
-//   ),
+),
 
 [_ADJUST] = LAYOUT_reviung41(
 RGB_VAI,   RGB_SAI, RGB_HUI,  RGB_MOD,  XXXXXXX,   RGB_TOG,            QWERTY,  COLEMAK,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
 RGB_VAD,   RGB_SAD, RGB_HUD,  RGB_RMOD, XXXXXXX,   XXXXXXX,            XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
 XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            RESET,    XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
                                         _______,   _______,  XXXXXXX,  _______,  _______
-),
-
-[_COLEMAK] = LAYOUT_reviung41(
-KC_ESC,   KC_Q,     KC_W,     KC_F,     KC_P,      KC_G,               KC_J,     KC_L,     KC_U,     KC_Y,     KC_SCLN,     KC_LALT,
-KC_TAB,   KC_A,     KC_R,     KC_S,     KC_T,      KC_D,               KC_H,     KC_N,     KC_E,     KC_I,     KC_O,  KC_QUOT,
-TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_V,      KC_B,           KC_K,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,  TD_ENT_CTRL,
-                                KC_LGUI,   TD_OSM_LSL1,    KC_SPC,   MOD2,    MOD3
-),
+)
 
 // [_BLANK] = LAYOUT_reviung41(
 //     XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
