@@ -18,6 +18,9 @@
 
 #define TAPPING_TERM 175
 
+// AUDIO_INIT_DELAY must be defined for preonic or the startup sound won't play
+#define AUDIO_INIT_DELAY
+
 #ifdef AUDIO_ENABLE
 #    define STARTUP_SONG SONG(PREONIC_SOUND)
 // #define STARTUP_SONG SONG(NO_SOUND)
