@@ -21,7 +21,9 @@ enum layer_names {
     _SYM,
     _NUM,
     _FUNC,
-    _ADJUST
+    _ADJUST,
+    _FPS,
+    _DJMAX
 };
 
 // #define LOWER  MO(_LOWER)
@@ -29,6 +31,8 @@ enum layer_names {
 #define ADJUST MO(_ADJUST)
 #define COLEMAK DF(_COLEMAK)
 #define QWERTY DF(_BASE)
+#define FPS DF(_FPS)
+#define DJMAX TG(_DJMAX)
 
 enum td_keycodes {
     OSM_LS_L1, // one-shot shift tap, layer 1 doubletap
@@ -88,9 +92,9 @@ TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_D,      KC_V,           KC_K,    
 
 [_NUM] = LAYOUT_reviung41(
     _______,  _______,  KC_7,     KC_8,     KC_9,   _______,           KC_HOME,  KC_PGUP,  KC_UP,    KC_PGDN,  _______,   ADJUST,
-    _______,  _______,  KC_4,     KC_5,     KC_6,   _______,           KC_END,   KC_LEFT,  KC_DOWN,  KC_RGHT,  _______,  KC_LSHIFT,
-    _______,  _______,  KC_1,     KC_2,     KC_3,   _______,           KC_INSERT,  _______, _______, _______, _______,  TD_ENT_CTRL,
-                                            KC_0,      KC_0,  KC_PDOT,   _______,  _______
+    _______,  _______,  KC_4,     KC_5,     KC_6,   _______,           KC_END,   KC_LEFT,  KC_DOWN,  KC_RGHT,  _______,  KC_LSFT,
+    _______,  _______,  KC_1,     KC_2,     KC_3,   _______,        KC_INSERT,  _______, _______, _______, _______,  TD_ENT_CTRL,
+                                            KC_0,      KC_0,  KC_PDOT,   MOD2,  _______
   ),
 
 [_FUNC] = LAYOUT_reviung41(
@@ -101,18 +105,32 @@ TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_D,      KC_V,           KC_K,    
   ),
 
 [_SYM] = LAYOUT_reviung41(
-    KC_TILDE,   XXXXXXX, KC_EXLM,  KC_LPRN,  KC_PSLS,   KC_PIPE,            KC_UNDS,  KC_PAST, KC_RPRN, KC_DLR,  XXXXXXX,  _______,
+    KC_TILDE,   XXXXXXX, KC_EXLM,  KC_LPRN,  KC_PSLS,   KC_PIPE,           KC_UNDS,  KC_PAST, KC_RPRN, KC_DLR,  XXXXXXX,  _______,
     _______,   XXXXXXX, KC_AT,    KC_LCBR,  KC_MINS,   KC_BSLS,            KC_SLSH,  KC_PPLS, KC_RCBR, KC_PERC, KC_COLN,  XXXXXXX,
     _______,   XXXXXXX, KC_HASH,  KC_LBRC,  KC_GRV,    KC_QUOT,            KC_DQUO,  KC_EQL,  KC_RBRC, KC_AMPR, KC_QUES,  _______,
                                             _______,   _______,  XXXXXXX,  _______,  _______
 ),
 
 [_ADJUST] = LAYOUT_reviung41(
-RGB_VAI,   RGB_SAI, RGB_HUI,  RGB_MOD,  XXXXXXX,   RGB_TOG,            QWERTY,  COLEMAK,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
-RGB_VAD,   RGB_SAD, RGB_HUD,  RGB_RMOD, XXXXXXX,   XXXXXXX,            XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
-XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            RESET,    XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
+RGB_VAI,   RGB_SAI, RGB_HUI,  RGB_MOD,  XXXXXXX,   RGB_TOG,            QWERTY,  COLEMAK,       FPS,  DJMAX,  XXXXXXX,  XXXXXXX,
+RGB_VAD,   RGB_SAD, RGB_HUD,  RGB_RMOD, XXXXXXX,   XXXXXXX,             QK_RBT,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
+XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            QK_BOOT,    XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
                                         _______,   _______,  XXXXXXX,  _______,  _______
-)
+),
+
+[_FPS] = LAYOUT_reviung41(
+     KC_ESC,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_I,               KC_3,     KC_Q,     KC_W,     KC_E,     KC_R,     KC_4,
+    XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_J,               KC_2,     KC_A,     KC_S,     KC_D,     KC_F,     KC_B,
+    COLEMAK,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_M,               KC_1,     KC_Z,     KC_X,     KC_C,     KC_V,  KC_LCTL,
+                                            KC_LALT,    KC_TAB,   KC_SPC,  KC_LSFT,  KC_Y
+),
+
+[_DJMAX] = LAYOUT_reviung41(
+    KC_ESC,   KC_Q,     KC_W,     KC_E,     KC_R,      KC_T,               KC_UP,     KC_U,     KC_I,     KC_LSFT,     KC_RSFT,     DJMAX,
+    KC_TAB,   KC_A,     KC_S,     KC_D,     KC_F,      KC_G,               KC_DOWN,     KC_J,     KC_K,     KC_L,     KC_SCLN,  MOD2,
+    TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_V,      KC_B,               KC_LEFT,     KC_RGHT,     KC_PGUP,  KC_PGDN,   KC_F1,  KC_ENT,
+                                    KC_V,   KC_B,    KC_SPC,   KC_N,    KC_M
+),
 
 // [_BLANK] = LAYOUT_reviung41(
 //     XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,  XXXXXXX,
@@ -152,10 +170,10 @@ void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
     td_state = cur_dance(state);
     switch (td_state) {
         case TD_SINGLE_TAP:
-            set_oneshot_mods(MOD_BIT(KC_LSHIFT));
+            set_oneshot_mods(MOD_BIT(KC_LSFT));
             break;
         case TD_SINGLE_HOLD:
-            register_mods(MOD_BIT(KC_LSHIFT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            register_mods(MOD_BIT(KC_LSFT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         case TD_DOUBLE_TAP: // Allow nesting of 2 parens `((` within tapping term
             set_oneshot_layer(_SYM, ONESHOT_START);
@@ -174,7 +192,7 @@ void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
             break;
         case TD_SINGLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LSHIFT));
+            unregister_mods(MOD_BIT(KC_LSFT));
             clear_oneshot_mods(); // For a layer-tap key, use `layer_off(_MY_LAYER)` here
             break;
         case TD_DOUBLE_TAP:
@@ -196,7 +214,7 @@ void ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
             register_code16(KC_ENT);
             break;
         case TD_SINGLE_HOLD:
-            register_mods(MOD_BIT(KC_LCTRL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            register_mods(MOD_BIT(KC_LCTL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         case TD_DOUBLE_TAP: // Allow nesting of 2 parens `((` within tapping term
             // set_oneshot_layer(_SYM, ONESHOT_START);
@@ -216,7 +234,7 @@ void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
             unregister_code16(KC_ENT);
             break;
         case TD_SINGLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LCTRL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            unregister_mods(MOD_BIT(KC_LCTL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         case TD_DOUBLE_TAP:
             break;
@@ -228,10 +246,10 @@ void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
     td_state = cur_dance(state);
     switch (td_state) {
         case TD_SINGLE_TAP:
-            set_oneshot_mods(MOD_BIT(KC_LCTRL));
+            set_oneshot_mods(MOD_BIT(KC_LCTL));
             break;
         case TD_SINGLE_HOLD:
-            register_mods(MOD_BIT(KC_LCTRL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            register_mods(MOD_BIT(KC_LCTL)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         case TD_DOUBLE_TAP:
             set_oneshot_mods(MOD_BIT(KC_LALT));
@@ -240,10 +258,10 @@ void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
             register_mods(MOD_BIT(KC_LALT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         case TD_TRIPLE_TAP:
-            set_oneshot_mods(MOD_BIT(KC_LCTRL) | MOD_BIT(KC_LALT));
+            set_oneshot_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT));
             break;
         case TD_TRIPLE_HOLD:
-            set_mods(MOD_BIT(KC_LCTRL) | MOD_BIT(KC_LALT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            set_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         default:
             break;
@@ -256,7 +274,7 @@ void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
             break;
         case TD_SINGLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LCTRL));
+            unregister_mods(MOD_BIT(KC_LCTL));
             clear_oneshot_mods();
             break;
         case TD_DOUBLE_HOLD:
