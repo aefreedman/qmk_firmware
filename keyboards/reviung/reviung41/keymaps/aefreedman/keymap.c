@@ -119,9 +119,9 @@ XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            QK_BOOT, 
 ),
 
 [_FPS] = LAYOUT_reviung41(
-     KC_ESC,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_I,               KC_3,     KC_Q,     KC_W,     KC_E,     KC_R,     KC_4,
-    XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_J,               KC_2,     KC_A,     KC_S,     KC_D,     KC_F,     KC_B,
-    COLEMAK,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,      KC_M,               KC_1,     KC_Z,     KC_X,     KC_C,     KC_V,  KC_LCTL,
+    KC_ESC,    KC_F1,     KC_F2,    KC_F3,  KC_T,      KC_I,               KC_3,     KC_Q,     KC_W,     KC_E,     KC_R,     KC_4,
+    KC_TAB,    KC_F4,     KC_F5,    KC_F6,  KC_G,      KC_J,               KC_2,     KC_A,     KC_S,     KC_D,     KC_F,     KC_B,
+    COLEMAK,   KC_F7,     KC_F8,    KC_F9,  KC_P,      KC_M,               KC_1,     KC_Z,     KC_X,     KC_C,     KC_V,  KC_LCTL,
                                             KC_LALT,    KC_TAB,   KC_SPC,  KC_LSFT,  KC_Y
 ),
 
@@ -129,7 +129,7 @@ XXXXXXX,   XXXXXXX, XXXXXXX,  XXXXXXX,  XXXXXXX,   XXXXXXX,            QK_BOOT, 
     KC_ESC,   KC_Q,     KC_W,     KC_E,     KC_R,      KC_T,               KC_UP,     KC_U,     KC_I,     KC_LSFT,     KC_RSFT,     DJMAX,
     KC_TAB,   KC_A,     KC_S,     KC_D,     KC_F,      KC_G,               KC_DOWN,     KC_J,     KC_K,     KC_L,     KC_SCLN,  MOD2,
     TD_CTRL_ALT,  KC_Z,     KC_X,     KC_C,     KC_V,      KC_B,               KC_LEFT,     KC_RGHT,     KC_PGUP,  KC_PGDN,   KC_F1,  KC_ENT,
-                                    KC_V,   KC_B,    KC_SPC,   KC_N,    KC_M
+                                    KC_V,   KC_B,    KC_SPC,   KC_N,    KC_F2
 ),
 
 // [_BLANK] = LAYOUT_reviung41(
