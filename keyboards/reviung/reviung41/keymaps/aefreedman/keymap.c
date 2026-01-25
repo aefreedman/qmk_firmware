@@ -52,7 +52,9 @@ typedef enum {
     TD_TRIPLE_HOLD
 } td_state_t;
 
-static td_state_t td_state;
+static td_state_t osm_ls_l1_state = TD_NONE;
+static td_state_t ent_ctrl_state = TD_NONE;
+static td_state_t ctrl_alt_state = TD_NONE;
 
 // Function to determine the current tapdance state
 td_state_t cur_dance(qk_tap_dance_state_t *state);
@@ -167,8 +169,8 @@ td_state_t cur_dance(qk_tap_dance_state_t *state) {
 // Handle the possible states for each tapdance keycode you define:
 // Method for handling One-Shot Left Shift to Layer 1 on doubletap-hold
 void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
-    td_state = cur_dance(state);
-    switch (td_state) {
+    osm_ls_l1_state = cur_dance(state);
+    switch (osm_ls_l1_state) {
         case TD_SINGLE_TAP:
             set_oneshot_mods(MOD_BIT(KC_LSFT));
             break;
@@ -187,7 +189,7 @@ void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
 }
 
 void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
-    switch (td_state) {
+    switch (osm_ls_l1_state) {
         case TD_SINGLE_TAP:
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
             break;
@@ -204,12 +206,13 @@ void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
         default:
             break;
     }
+    osm_ls_l1_state = TD_NONE;
 }
 
 // Handle the possible states for each tapdance keycode you define:
 void ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
-    td_state = cur_dance(state);
-    switch (td_state) {
+    ent_ctrl_state = cur_dance(state);
+    switch (ent_ctrl_state) {
         case TD_SINGLE_TAP:
             register_code16(KC_ENT);
             break;
@@ -228,7 +231,7 @@ void ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
 }
 
 void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
-    switch (td_state) {
+    switch (ent_ctrl_state) {
         case TD_SINGLE_TAP:
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
             unregister_code16(KC_ENT);
@@ -241,10 +244,13 @@ void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
         default:
             break;
     }
-}// Handle the possible states for each tapdance keycode you define:
+    ent_ctrl_state = TD_NONE;
+}
+
+// Handle the possible states for each tapdance keycode you define:
 void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
-    td_state = cur_dance(state);
-    switch (td_state) {
+    ctrl_alt_state = cur_dance(state);
+    switch (ctrl_alt_state) {
         case TD_SINGLE_TAP:
             set_oneshot_mods(MOD_BIT(KC_LCTL));
             break;
@@ -261,7 +267,7 @@ void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
             set_oneshot_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT));
             break;
         case TD_TRIPLE_HOLD:
-            set_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
+            register_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT)); // For a layer-tap key, use `layer_on(_MY_LAYER)` here
             break;
         default:
             break;
@@ -269,7 +275,7 @@ void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
 }
 
 void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
-    switch (td_state) {
+    switch (ctrl_alt_state) {
         case TD_SINGLE_TAP:
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
             break;
@@ -282,12 +288,13 @@ void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
             clear_oneshot_mods();
             break;
         case TD_TRIPLE_HOLD:
-            clear_mods();
+            unregister_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT));
             clear_oneshot_mods();
             break;
         default:
             break;
     }
+    ctrl_alt_state = TD_NONE;
 }
 
 // Define `ACTION_TAP_DANCE_FN_ADVANCED()` for each tapdance keycode, passing in `finished` and `reset` functions
