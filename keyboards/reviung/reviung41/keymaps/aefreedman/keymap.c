@@ -56,10 +56,15 @@ static td_state_t osm_ls_l1_state = TD_NONE;
 static td_state_t ent_ctrl_state = TD_NONE;
 static td_state_t ctrl_alt_state = TD_NONE;
 
+#define OSM_LSFT_HOLD_GRACE 130
+
+static uint16_t osm_ls_l1_timer = 0;
+
 // Function to determine the current tapdance state
 td_state_t cur_dance(qk_tap_dance_state_t *state);
 
 // `finished` and `reset` functions for each tapdance keycode
+void osm_ls_l1_each_tap(qk_tap_dance_state_t *state, void *user_data);
 void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data);
 void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data);
 
@@ -167,8 +172,21 @@ td_state_t cur_dance(qk_tap_dance_state_t *state) {
 
 // Handle the possible states for each tapdance keycode you define:
 // Method for handling One-Shot Left Shift to Layer 1 on doubletap-hold
+void osm_ls_l1_each_tap(qk_tap_dance_state_t *state, void *user_data) {
+    (void)user_data;
+
+    if (state->count == 1) {
+        osm_ls_l1_timer = timer_read();
+    }
+}
+
 void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
     osm_ls_l1_state = cur_dance(state);
+
+    if (osm_ls_l1_state == TD_SINGLE_HOLD && state->interrupted && timer_elapsed(osm_ls_l1_timer) < OSM_LSFT_HOLD_GRACE) {
+        osm_ls_l1_state = TD_SINGLE_TAP;
+    }
+
     switch (osm_ls_l1_state) {
         case TD_SINGLE_TAP:
             set_oneshot_mods(MOD_BIT(KC_LSFT));
@@ -298,7 +316,7 @@ void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
 
 // Define `ACTION_TAP_DANCE_FN_ADVANCED()` for each tapdance keycode, passing in `finished` and `reset` functions
 qk_tap_dance_action_t tap_dance_actions[] = {
-    [OSM_LS_L1] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, osm_ls_l1_finished, osm_ls_l1_reset),
+    [OSM_LS_L1] = ACTION_TAP_DANCE_FN_ADVANCED(osm_ls_l1_each_tap, osm_ls_l1_finished, osm_ls_l1_reset),
     [ENT_CTRL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ent_ctrl_finished, ent_ctrl_reset),
     [CTRL_ALT] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ctrl_alt_finished, ctrl_alt_reset)
 };
