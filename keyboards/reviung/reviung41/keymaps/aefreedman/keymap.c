@@ -15,6 +15,38 @@
  */
 
 #include QMK_KEYBOARD_H
+#include "raw_hid.h"
+
+#define QMK_NOTIFY_CMD_PING  0x01
+#define QMK_NOTIFY_CMD_FLASH 0x02
+
+#define QMK_NOTIFY_STATUS_OK          0x00
+#define QMK_NOTIFY_STATUS_UNSUPPORTED 0x01
+
+#ifndef RAW_EPSIZE
+#    define RAW_EPSIZE 32
+#endif
+
+#define QMK_NOTIFY_FLASH_H_DEFAULT     0
+#define QMK_NOTIFY_FLASH_S_DEFAULT   255
+#define QMK_NOTIFY_FLASH_V_DEFAULT   160
+#define QMK_NOTIFY_FLASH_MS_DEFAULT  800
+#define QMK_NOTIFY_FLASH_MS_MIN      100
+#define QMK_NOTIFY_FLASH_MS_MAX     5000
+
+typedef struct {
+    bool     active;
+    bool     was_enabled;
+    uint8_t  mode;
+    uint8_t  hue;
+    uint8_t  sat;
+    uint8_t  val;
+    uint8_t  speed;
+    uint32_t start_time;
+    uint16_t duration_ms;
+} rgb_flash_state_t;
+
+static rgb_flash_state_t rgb_flash_state = {0};
 
 enum layer_names {
     _COLEMAK,
@@ -34,9 +66,9 @@ enum layer_names {
 #define DJMAX TG(_DJMAX)
 
 enum td_keycodes {
-    OSM_LS_L1,
-    ENT_CTRL,
-    CTRL_ALT,
+    TD_SHIFT_SYM,
+    TD_ENTER_CTRL,
+    TD_CTRL_ALT,
 };
 
 typedef enum {
@@ -50,49 +82,54 @@ typedef enum {
     TD_TRIPLE_HOLD,
 } td_state_t;
 
-static td_state_t osm_ls_l1_state = TD_NONE;
-static td_state_t ent_ctrl_state  = TD_NONE;
+static td_state_t shift_sym_state  = TD_NONE;
+static td_state_t enter_ctrl_state = TD_NONE;
 static td_state_t ctrl_alt_state  = TD_NONE;
 
-#define OSM_LSFT_HOLD_GRACE 130
+#define SHIFT_HOLD_GRACE_MS 130
 
-static uint16_t osm_ls_l1_timer = 0;
+static uint16_t shift_sym_timer = 0;
 
 static td_state_t cur_dance(qk_tap_dance_state_t *state);
-static void       osm_ls_l1_each_tap(qk_tap_dance_state_t *state, void *user_data);
-static void       osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data);
-static void       osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data);
-static void       ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data);
-static void       ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data);
+static void       shift_sym_on_each_tap(qk_tap_dance_state_t *state, void *user_data);
+static void       shift_sym_finished(qk_tap_dance_state_t *state, void *user_data);
+static void       shift_sym_reset(qk_tap_dance_state_t *state, void *user_data);
+static void       enter_ctrl_finished(qk_tap_dance_state_t *state, void *user_data);
+static void       enter_ctrl_reset(qk_tap_dance_state_t *state, void *user_data);
 static void       ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data);
 static void       ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data);
+static void       unregister_mods_and_clear_oneshot(uint8_t mods);
+static uint16_t   qmk_notify_u16le(const uint8_t *bytes);
+static uint16_t   qmk_notify_clamp_u16(uint16_t value, uint16_t min, uint16_t max);
+static void       qmk_notify_begin_flash(const uint8_t *data, uint8_t length);
+static void       qmk_notify_restore_rgb(void);
 
-#define MOD2 LT(_NUM, KC_BSPC)
-#define MOD3 LT(_FUNC, KC_DEL)
-#define TD_OSM_LSL1 TD(OSM_LS_L1)
-#define TD_ENT_CTRL TD(ENT_CTRL)
-#define TD_CTRL_ALT TD(CTRL_ALT)
+#define TH_NUM_BSPC LT(_NUM, KC_BSPC)
+#define TH_FUNC_DEL LT(_FUNC, KC_DEL)
+#define DK_SHIFT_SYM TD(TD_SHIFT_SYM)
+#define DK_ENTER_CTRL TD(TD_ENTER_CTRL)
+#define DK_CTRL_ALT TD(TD_CTRL_ALT)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_reviung41(
         KC_ESC,      KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,                       KC_Y,      KC_U,    KC_I,    KC_O,    KC_P,       KC_LALT,
         KC_TAB,      KC_A,    KC_S,    KC_D,    KC_F,    KC_G,                       KC_H,      KC_J,    KC_K,    KC_L,    KC_SCLN,    KC_QUOT,
-        TD_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,                       KC_N,      KC_M,    KC_COMM, KC_DOT,  KC_SLSH,    TD_ENT_CTRL,
-                                              KC_LGUI,    TD_OSM_LSL1, KC_SPC,       MOD2,      MOD3
+        DK_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,                       KC_N,      KC_M,    KC_COMM, KC_DOT,  KC_SLSH,    DK_ENTER_CTRL,
+                                              KC_LGUI,    DK_SHIFT_SYM, KC_SPC,       TH_NUM_BSPC, TH_FUNC_DEL
     ),
 
     [_COLEMAK] = LAYOUT_reviung41(
         KC_ESC,      KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,                       KC_J,      KC_L,    KC_U,    KC_Y,    KC_SCLN,    KC_LALT,
         KC_TAB,      KC_A,    KC_R,    KC_S,    KC_T,    KC_G,                       KC_M,      KC_N,    KC_E,    KC_I,    KC_O,       KC_QUOT,
-        TD_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,                       KC_K,      KC_H,    KC_COMM, KC_DOT,  KC_SLSH,    TD_ENT_CTRL,
-                                              KC_LGUI,    TD_OSM_LSL1, KC_SPC,       MOD2,      MOD3
+        DK_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_D,    KC_V,                       KC_K,      KC_H,    KC_COMM, KC_DOT,  KC_SLSH,    DK_ENTER_CTRL,
+                                              KC_LGUI,    DK_SHIFT_SYM, KC_SPC,       TH_NUM_BSPC, TH_FUNC_DEL
     ),
 
     [_NUM] = LAYOUT_reviung41(
         _______,     _______, KC_7,    KC_8,    KC_9,    _______,                    KC_HOME,   KC_PGUP, KC_UP,   KC_PGDN, _______,    ADJUST,
         _______,     _______, KC_4,    KC_5,    KC_6,    _______,                    KC_END,    KC_LEFT, KC_DOWN, KC_RGHT, _______,    KC_LSFT,
-        _______,     _______, KC_1,    KC_2,    KC_3,    _______,                    KC_INSERT, _______, _______, _______, _______,    TD_ENT_CTRL,
-                                              KC_0,       KC_0,       KC_PDOT,       MOD2,      _______
+        _______,     _______, KC_1,    KC_2,    KC_3,    _______,                    KC_INSERT, _______, _______, _______, _______,    DK_ENTER_CTRL,
+                                              KC_0,       KC_0,       KC_PDOT,       TH_NUM_BSPC, _______
     ),
 
     [_FUNC] = LAYOUT_reviung41(
@@ -125,8 +162,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_DJMAX] = LAYOUT_reviung41(
         KC_ESC,      KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,                       KC_UP,     KC_U,    KC_I,    KC_LSFT, KC_RSFT,    DJMAX,
-        KC_TAB,      KC_A,    KC_S,    KC_D,    KC_F,    KC_G,                       KC_DOWN,   KC_J,    KC_K,    KC_L,    KC_SCLN,    MOD2,
-        TD_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,                       KC_LEFT,   KC_RGHT, KC_PGUP, KC_PGDN, KC_F1,      KC_ENT,
+        KC_TAB,      KC_A,    KC_S,    KC_D,    KC_F,    KC_G,                       KC_DOWN,   KC_J,    KC_K,    KC_L,    KC_SCLN,    TH_NUM_BSPC,
+        DK_CTRL_ALT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,                       KC_LEFT,   KC_RGHT, KC_PGUP, KC_PGDN, KC_F1,      KC_ENT,
                                               KC_V,       KC_B,      KC_SPC,         KC_N,       KC_F2
     ),
 
@@ -163,26 +200,26 @@ static td_state_t cur_dance(qk_tap_dance_state_t *state) {
     return TD_UNKNOWN;
 }
 
-static void osm_ls_l1_each_tap(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_on_each_tap(qk_tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
     if (state->count == 1) {
-        osm_ls_l1_timer = timer_read();
+        shift_sym_timer = timer_read();
     }
 }
 
-static void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_finished(qk_tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
-    osm_ls_l1_state = cur_dance(state);
+    shift_sym_state = cur_dance(state);
 
-    if (osm_ls_l1_state == TD_SINGLE_HOLD &&
+    if (shift_sym_state == TD_SINGLE_HOLD &&
         state->interrupted &&
-        timer_elapsed(osm_ls_l1_timer) < OSM_LSFT_HOLD_GRACE) {
-        osm_ls_l1_state = TD_SINGLE_TAP;
+        timer_elapsed(shift_sym_timer) < SHIFT_HOLD_GRACE_MS) {
+        shift_sym_state = TD_SINGLE_TAP;
     }
 
-    switch (osm_ls_l1_state) {
+    switch (shift_sym_state) {
         case TD_SINGLE_TAP:
             set_oneshot_mods(MOD_BIT(KC_LSFT));
             break;
@@ -200,16 +237,15 @@ static void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-static void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_reset(qk_tap_dance_state_t *state, void *user_data) {
     (void)state;
     (void)user_data;
 
-    switch (osm_ls_l1_state) {
+    switch (shift_sym_state) {
         case TD_SINGLE_TAP:
             break;
         case TD_SINGLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LSFT));
-            clear_oneshot_mods();
+            unregister_mods_and_clear_oneshot(MOD_BIT(KC_LSFT));
             break;
         case TD_DOUBLE_TAP:
             clear_oneshot_layer_state(ONESHOT_PRESSED);
@@ -221,15 +257,15 @@ static void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
             break;
     }
 
-    osm_ls_l1_state = TD_NONE;
+    shift_sym_state = TD_NONE;
 }
 
-static void ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
+static void enter_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
-    ent_ctrl_state = cur_dance(state);
+    enter_ctrl_state = cur_dance(state);
 
-    switch (ent_ctrl_state) {
+    switch (enter_ctrl_state) {
         case TD_SINGLE_TAP:
             register_code16(KC_ENT);
             break;
@@ -241,11 +277,11 @@ static void ent_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-static void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
+static void enter_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
     (void)state;
     (void)user_data;
 
-    switch (ent_ctrl_state) {
+    switch (enter_ctrl_state) {
         case TD_SINGLE_TAP:
             unregister_code16(KC_ENT);
             break;
@@ -256,7 +292,7 @@ static void ent_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
             break;
     }
 
-    ent_ctrl_state = TD_NONE;
+    enter_ctrl_state = TD_NONE;
 }
 
 static void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
@@ -294,16 +330,13 @@ static void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
 
     switch (ctrl_alt_state) {
         case TD_SINGLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LCTL));
-            clear_oneshot_mods();
+            unregister_mods_and_clear_oneshot(MOD_BIT(KC_LCTL));
             break;
         case TD_DOUBLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LALT));
-            clear_oneshot_mods();
+            unregister_mods_and_clear_oneshot(MOD_BIT(KC_LALT));
             break;
         case TD_TRIPLE_HOLD:
-            unregister_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT));
-            clear_oneshot_mods();
+            unregister_mods_and_clear_oneshot(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LALT));
             break;
         default:
             break;
@@ -312,8 +345,133 @@ static void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
     ctrl_alt_state = TD_NONE;
 }
 
+static void unregister_mods_and_clear_oneshot(uint8_t mods) {
+    unregister_mods(mods);
+    clear_oneshot_mods();
+}
+
+static uint16_t qmk_notify_u16le(const uint8_t *bytes) {
+    return (uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8);
+}
+
+static uint16_t qmk_notify_clamp_u16(uint16_t value, uint16_t min, uint16_t max) {
+    if (value < min) {
+        return min;
+    }
+
+    if (value > max) {
+        return max;
+    }
+
+    return value;
+}
+
+static void qmk_notify_begin_flash(const uint8_t *data, uint8_t length) {
+#ifdef RGBLIGHT_ENABLE
+    uint8_t  hue         = QMK_NOTIFY_FLASH_H_DEFAULT;
+    uint8_t  sat         = QMK_NOTIFY_FLASH_S_DEFAULT;
+    uint8_t  val         = QMK_NOTIFY_FLASH_V_DEFAULT;
+    uint16_t duration_ms = QMK_NOTIFY_FLASH_MS_DEFAULT;
+
+    if (length >= 2) {
+        hue = data[1];
+    }
+    if (length >= 3) {
+        sat = data[2];
+    }
+    if (length >= 4) {
+        val = data[3];
+    }
+    if (length >= 6) {
+        duration_ms = qmk_notify_u16le(data + 4);
+    }
+
+    duration_ms = qmk_notify_clamp_u16(duration_ms, QMK_NOTIFY_FLASH_MS_MIN, QMK_NOTIFY_FLASH_MS_MAX);
+
+    if (!rgb_flash_state.active) {
+        rgb_flash_state.was_enabled = rgblight_is_enabled();
+        rgb_flash_state.mode        = rgblight_get_mode();
+        rgb_flash_state.hue         = rgblight_get_hue();
+        rgb_flash_state.sat         = rgblight_get_sat();
+        rgb_flash_state.val         = rgblight_get_val();
+        rgb_flash_state.speed       = rgblight_get_speed();
+    }
+
+    rgb_flash_state.active      = true;
+    rgb_flash_state.start_time  = timer_read32();
+    rgb_flash_state.duration_ms = duration_ms;
+
+    rgblight_enable_noeeprom();
+    rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
+    rgblight_sethsv_noeeprom(hue, sat, val);
+#else
+    (void)data;
+    (void)length;
+#endif
+}
+
+static void qmk_notify_restore_rgb(void) {
+#ifdef RGBLIGHT_ENABLE
+    if (!rgb_flash_state.active) {
+        return;
+    }
+
+    rgblight_enable_noeeprom();
+    rgblight_mode_noeeprom(rgb_flash_state.mode);
+    rgblight_sethsv_noeeprom(rgb_flash_state.hue, rgb_flash_state.sat, rgb_flash_state.val);
+    rgblight_set_speed_noeeprom(rgb_flash_state.speed);
+
+    if (!rgb_flash_state.was_enabled) {
+        rgblight_disable_noeeprom();
+    }
+
+    rgb_flash_state.active = false;
+#endif
+}
+
+void housekeeping_task_user(void) {
+#ifdef RGBLIGHT_ENABLE
+    if (rgb_flash_state.active && timer_elapsed32(rgb_flash_state.start_time) >= rgb_flash_state.duration_ms) {
+        qmk_notify_restore_rgb();
+    }
+#endif
+}
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    uint8_t command;
+    uint8_t status = QMK_NOTIFY_STATUS_UNSUPPORTED;
+    uint8_t response[RAW_EPSIZE] = {0};
+
+    if (length == 0) {
+        return;
+    }
+
+    command = data[0];
+
+    switch (command) {
+        case QMK_NOTIFY_CMD_PING:
+            status = QMK_NOTIFY_STATUS_OK;
+            break;
+        case QMK_NOTIFY_CMD_FLASH:
+            qmk_notify_begin_flash(data, length);
+            status = QMK_NOTIFY_STATUS_OK;
+            break;
+        default:
+            break;
+    }
+
+    response[0] = command;
+    response[1] = status;
+#ifdef RGBLIGHT_ENABLE
+    response[2] = rgb_flash_state.active ? 1 : 0;
+    response[3] = rgblight_is_enabled() ? 1 : 0;
+#endif
+
+    raw_hid_send(response, RAW_EPSIZE);
+}
+
 qk_tap_dance_action_t tap_dance_actions[] = {
-    [OSM_LS_L1] = ACTION_TAP_DANCE_FN_ADVANCED(osm_ls_l1_each_tap, osm_ls_l1_finished, osm_ls_l1_reset),
-    [ENT_CTRL]  = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ent_ctrl_finished, ent_ctrl_reset),
-    [CTRL_ALT]  = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ctrl_alt_finished, ctrl_alt_reset),
+    [TD_SHIFT_SYM]  = ACTION_TAP_DANCE_FN_ADVANCED(shift_sym_on_each_tap, shift_sym_finished, shift_sym_reset),
+    [TD_ENTER_CTRL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, enter_ctrl_finished, enter_ctrl_reset),
+    [TD_CTRL_ALT]   = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ctrl_alt_finished, ctrl_alt_reset),
 };
