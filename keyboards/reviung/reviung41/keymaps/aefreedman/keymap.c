@@ -19,6 +19,8 @@
 
 #define QMK_NOTIFY_CMD_PING  0x01
 #define QMK_NOTIFY_CMD_FLASH 0x02
+#define QMK_NOTIFY_CMD_RGB   0x03
+#define QMK_NOTIFY_CMD_RGB_AT 0x04
 
 #define QMK_NOTIFY_STATUS_OK          0x00
 #define QMK_NOTIFY_STATUS_UNSUPPORTED 0x01
@@ -32,7 +34,7 @@
 #define QMK_NOTIFY_FLASH_V_DEFAULT   160
 #define QMK_NOTIFY_FLASH_MS_DEFAULT  800
 #define QMK_NOTIFY_FLASH_MS_MIN      100
-#define QMK_NOTIFY_FLASH_MS_MAX     5000
+#define QMK_NOTIFY_FLASH_MS_MAX    60000
 
 typedef struct {
     bool     active;
@@ -47,6 +49,24 @@ typedef struct {
 } rgb_flash_state_t;
 
 static rgb_flash_state_t rgb_flash_state = {0};
+
+typedef struct {
+    bool     valid;
+    bool     use_rgb;
+    bool     use_single_led;
+    uint8_t  hue;
+    uint8_t  sat;
+    uint8_t  val;
+    uint8_t  red;
+    uint8_t  green;
+    uint8_t  blue;
+    uint8_t  led_index;
+    uint16_t duration_ms;
+} rgb_pending_state_t;
+
+static rgb_pending_state_t rgb_pending_state = {0};
+
+static const uint8_t qmk_notify_active_leds[] = {0, 2, 3, 4, 5, 6, 8, 9};
 
 enum layer_names {
     _COLEMAK,
@@ -102,6 +122,10 @@ static void       unregister_mods_and_clear_oneshot(uint8_t mods);
 static uint16_t   qmk_notify_u16le(const uint8_t *bytes);
 static uint16_t   qmk_notify_clamp_u16(uint16_t value, uint16_t min, uint16_t max);
 static void       qmk_notify_begin_flash(const uint8_t *data, uint8_t length);
+static void       qmk_notify_begin_rgb(const uint8_t *data, uint8_t length);
+static void       qmk_notify_begin_rgb_at(const uint8_t *data, uint8_t length);
+static void       qmk_notify_apply_pending(void);
+static void       qmk_notify_setrgb_active(uint8_t red, uint8_t green, uint8_t blue);
 static void       qmk_notify_restore_rgb(void);
 
 #define TH_NUM_BSPC LT(_NUM, KC_BSPC)
@@ -397,16 +421,165 @@ static void qmk_notify_begin_flash(const uint8_t *data, uint8_t length) {
         rgb_flash_state.speed       = rgblight_get_speed();
     }
 
-    rgb_flash_state.active      = true;
-    rgb_flash_state.start_time  = timer_read32();
-    rgb_flash_state.duration_ms = duration_ms;
-
-    rgblight_enable_noeeprom();
-    rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
-    rgblight_sethsv_noeeprom(hue, sat, val);
+    rgb_pending_state.valid       = true;
+    rgb_pending_state.use_rgb     = false;
+    rgb_pending_state.use_single_led = false;
+    rgb_pending_state.hue         = hue;
+    rgb_pending_state.sat         = sat;
+    rgb_pending_state.val         = val;
+    rgb_pending_state.duration_ms = duration_ms;
 #else
     (void)data;
     (void)length;
+#endif
+}
+
+static void qmk_notify_begin_rgb(const uint8_t *data, uint8_t length) {
+#ifdef RGBLIGHT_ENABLE
+    uint8_t  red         = 255;
+    uint8_t  green       = 0;
+    uint8_t  blue        = 0;
+    uint16_t duration_ms = QMK_NOTIFY_FLASH_MS_DEFAULT;
+
+    if (length >= 2) {
+        red = data[1];
+    }
+    if (length >= 3) {
+        green = data[2];
+    }
+    if (length >= 4) {
+        blue = data[3];
+    }
+    if (length >= 6) {
+        duration_ms = qmk_notify_u16le(data + 4);
+    }
+
+    duration_ms = qmk_notify_clamp_u16(duration_ms, QMK_NOTIFY_FLASH_MS_MIN, QMK_NOTIFY_FLASH_MS_MAX);
+
+    if (!rgb_flash_state.active) {
+        rgb_flash_state.was_enabled = rgblight_is_enabled();
+        rgb_flash_state.mode        = rgblight_get_mode();
+        rgb_flash_state.hue         = rgblight_get_hue();
+        rgb_flash_state.sat         = rgblight_get_sat();
+        rgb_flash_state.val         = rgblight_get_val();
+        rgb_flash_state.speed       = rgblight_get_speed();
+    }
+
+    rgb_pending_state.valid       = true;
+    rgb_pending_state.use_rgb     = true;
+    rgb_pending_state.use_single_led = false;
+    rgb_pending_state.red         = red;
+    rgb_pending_state.green       = green;
+    rgb_pending_state.blue        = blue;
+    rgb_pending_state.duration_ms = duration_ms;
+#else
+    (void)data;
+    (void)length;
+#endif
+}
+
+static void qmk_notify_begin_rgb_at(const uint8_t *data, uint8_t length) {
+#ifdef RGBLIGHT_ENABLE
+    uint8_t  led_index   = 0;
+    uint8_t  red         = 255;
+    uint8_t  green       = 0;
+    uint8_t  blue        = 0;
+    uint16_t duration_ms = QMK_NOTIFY_FLASH_MS_DEFAULT;
+
+    if (length >= 2) {
+        led_index = data[1];
+    }
+    if (length >= 3) {
+        red = data[2];
+    }
+    if (length >= 4) {
+        green = data[3];
+    }
+    if (length >= 5) {
+        blue = data[4];
+    }
+    if (length >= 7) {
+        duration_ms = qmk_notify_u16le(data + 5);
+    }
+
+    if (led_index >= RGBLED_NUM) {
+        return;
+    }
+
+    duration_ms = qmk_notify_clamp_u16(duration_ms, QMK_NOTIFY_FLASH_MS_MIN, QMK_NOTIFY_FLASH_MS_MAX);
+
+    if (!rgb_flash_state.active) {
+        rgb_flash_state.was_enabled = rgblight_is_enabled();
+        rgb_flash_state.mode        = rgblight_get_mode();
+        rgb_flash_state.hue         = rgblight_get_hue();
+        rgb_flash_state.sat         = rgblight_get_sat();
+        rgb_flash_state.val         = rgblight_get_val();
+        rgb_flash_state.speed       = rgblight_get_speed();
+    }
+
+    rgb_pending_state.valid          = true;
+    rgb_pending_state.use_rgb        = true;
+    rgb_pending_state.use_single_led = true;
+    rgb_pending_state.led_index      = led_index;
+    rgb_pending_state.red            = red;
+    rgb_pending_state.green          = green;
+    rgb_pending_state.blue           = blue;
+    rgb_pending_state.duration_ms    = duration_ms;
+#else
+    (void)data;
+    (void)length;
+#endif
+}
+
+static void qmk_notify_apply_pending(void) {
+#ifdef RGBLIGHT_ENABLE
+    if (!rgb_pending_state.valid) {
+        return;
+    }
+
+    rgblight_enable_noeeprom();
+    rgblight_set_clipping_range(0, RGBLED_NUM);
+    rgblight_set_effect_range(0, RGBLED_NUM);
+    rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
+
+    if (rgb_pending_state.use_rgb) {
+        if (rgb_pending_state.use_single_led) {
+            rgblight_setrgb_range(0, 0, 0, 0, RGBLED_NUM);
+            rgblight_setrgb_at(
+                rgb_pending_state.red,
+                rgb_pending_state.green,
+                rgb_pending_state.blue,
+                rgb_pending_state.led_index
+            );
+        } else {
+            qmk_notify_setrgb_active(rgb_pending_state.red, rgb_pending_state.green, rgb_pending_state.blue);
+        }
+    } else {
+        RGB rgb = hsv_to_rgb((HSV){rgb_pending_state.hue, rgb_pending_state.sat, rgb_pending_state.val});
+        qmk_notify_setrgb_active(rgb.r, rgb.g, rgb.b);
+    }
+
+    rgb_flash_state.active      = true;
+    rgb_flash_state.start_time  = timer_read32();
+    rgb_flash_state.duration_ms = rgb_pending_state.duration_ms;
+    rgb_pending_state.valid     = false;
+#endif
+}
+
+static void qmk_notify_setrgb_active(uint8_t red, uint8_t green, uint8_t blue) {
+#ifdef RGBLIGHT_ENABLE
+    rgblight_setrgb_range(0, 0, 0, 0, RGBLED_NUM);
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(qmk_notify_active_leds); i++) {
+        uint8_t led_index = qmk_notify_active_leds[i];
+        if (led_index < RGBLED_NUM) {
+            rgblight_setrgb_at(red, green, blue, led_index);
+        }
+    }
+#else
+    (void)red;
+    (void)green;
+    (void)blue;
 #endif
 }
 
@@ -431,6 +604,8 @@ static void qmk_notify_restore_rgb(void) {
 
 void housekeeping_task_user(void) {
 #ifdef RGBLIGHT_ENABLE
+    qmk_notify_apply_pending();
+
     if (rgb_flash_state.active && timer_elapsed32(rgb_flash_state.start_time) >= rgb_flash_state.duration_ms) {
         qmk_notify_restore_rgb();
     }
@@ -456,6 +631,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             qmk_notify_begin_flash(data, length);
             status = QMK_NOTIFY_STATUS_OK;
             break;
+        case QMK_NOTIFY_CMD_RGB:
+            qmk_notify_begin_rgb(data, length);
+            status = QMK_NOTIFY_STATUS_OK;
+            break;
+        case QMK_NOTIFY_CMD_RGB_AT:
+            qmk_notify_begin_rgb_at(data, length);
+            status = QMK_NOTIFY_STATUS_OK;
+            break;
         default:
             break;
     }
@@ -465,6 +648,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #ifdef RGBLIGHT_ENABLE
     response[2] = rgb_flash_state.active ? 1 : 0;
     response[3] = rgblight_is_enabled() ? 1 : 0;
+    response[4] = rgblight_get_mode();
+    response[5] = rgblight_get_hue();
+    response[6] = rgblight_get_sat();
+    response[7] = rgblight_get_val();
 #endif
 
     raw_hid_send(response, RAW_EPSIZE);
