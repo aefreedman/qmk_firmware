@@ -52,11 +52,11 @@ typedef enum {
 static td_state_t td_state;
 
 // Function to determine the current tapdance state
-td_state_t cur_dance(qk_tap_dance_state_t *state);
+td_state_t cur_dance(tap_dance_state_t *state);
 
 // `finished` and `reset` functions for each tapdance keycode
-void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data);
-void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data);
+void osm_ls_l1_finished(tap_dance_state_t *state, void *user_data);
+void osm_ls_l1_reset(tap_dance_state_t *state, void *user_data);
 
 
 #define OSM_LS OSM  (MOD_LSFT)
@@ -129,11 +129,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     * `-----------------------------------------------------------------------------------'
     */
 [_ADJ] = LAYOUT_ortho_5x12(
-	_______,    RGB_M_P,    RGB_M_B,    RGB_M_R,    RGB_M_SW,    RGB_M_SN,    RGB_M_K,    RGB_M_G,    RGB_M_T,     RGB_SPD,    RGB_SPI,    RGB_TOG,
-    _______,    QK_BOOT,      DB_TOGG,     _______,      _______,     GUI_OFF,     GUI_ON,     _______,    _______,    RGB_RMOD,   RGB_MOD,   _______,
-    _______,   _______,      MU_NEXT,     AU_ON,      AU_OFF,      AG_NORM,     AG_SWAP,   _______,     _______,       RGB_HUD,    RGB_HUI,   _______,
-    _______,    AU_PREV,     AU_NEXT,     MU_ON,      MU_OFF,      MI_ON,       MI_OFF,    _______,     _______,       RGB_SAD,    RGB_SAI,   _______,
-    _______,   _______,     _______,     _______,     _______,      _______,      _______,     _______,     _______,       RGB_VAD,    RGB_VAI,   _______
+	_______,    RGB_M_P,    RGB_M_B,    RGB_M_R,    RGB_M_SW,    RGB_M_SN,    RGB_M_K,    RGB_M_G,    RGB_M_T,     UG_SPDD,    UG_SPDU,    UG_TOGG,
+    _______,    QK_BOOT,      DB_TOGG,     _______,      _______,     GU_OFF,      GU_ON,     _______,    _______,    UG_PREV,   UG_NEXT,   _______,
+    _______,   _______,      MU_NEXT,     AU_ON,      AU_OFF,      AG_NORM,     AG_SWAP,   _______,     _______,       UG_HUED,    UG_HUEU,   _______,
+    _______,    AU_PREV,     AU_NEXT,     MU_ON,      MU_OFF,      MI_ON,       MI_OFF,    _______,     _______,       UG_SATD,    UG_SATU,   _______,
+    _______,   _______,     _______,     _______,     _______,      _______,      _______,     _______,     _______,       UG_VALD,    UG_VALU,   _______
 		),
 
 
@@ -161,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 // Determine the tapdance state to return
-td_state_t cur_dance(qk_tap_dance_state_t *state) {
+td_state_t cur_dance(tap_dance_state_t *state) {
     if (state->count == 1) {
         if (state->interrupted || !state->pressed) return TD_SINGLE_TAP;
         else return TD_SINGLE_HOLD;
@@ -172,7 +172,7 @@ td_state_t cur_dance(qk_tap_dance_state_t *state) {
 }
 
 // Handle the possible states for each tapdance keycode you define:
-void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
+void osm_ls_l1_finished(tap_dance_state_t *state, void *user_data) {
     td_state = cur_dance(state);
     switch (td_state) {
         case TD_SINGLE_TAP:
@@ -189,7 +189,7 @@ void osm_ls_l1_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
+void osm_ls_l1_reset(tap_dance_state_t *state, void *user_data) {
     switch (td_state) {
         case TD_SINGLE_TAP:
             // clear_oneshot_mods(); // dont clear on single tap or it resets osm dummy
@@ -207,7 +207,7 @@ void osm_ls_l1_reset(qk_tap_dance_state_t *state, void *user_data) {
 }
 
 // Define `ACTION_TAP_DANCE_FN_ADVANCED()` for each tapdance keycode, passing in `finished` and `reset` functions
-qk_tap_dance_action_t tap_dance_actions[] = {
+tap_dance_action_t tap_dance_actions[] = {
     [OSM_LS_L1] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, osm_ls_l1_finished, osm_ls_l1_reset)
 };
 

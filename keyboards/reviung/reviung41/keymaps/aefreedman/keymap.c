@@ -110,14 +110,14 @@ static td_state_t ctrl_alt_state  = TD_NONE;
 
 static uint16_t shift_sym_timer = 0;
 
-static td_state_t cur_dance(qk_tap_dance_state_t *state);
-static void       shift_sym_on_each_tap(qk_tap_dance_state_t *state, void *user_data);
-static void       shift_sym_finished(qk_tap_dance_state_t *state, void *user_data);
-static void       shift_sym_reset(qk_tap_dance_state_t *state, void *user_data);
-static void       enter_ctrl_finished(qk_tap_dance_state_t *state, void *user_data);
-static void       enter_ctrl_reset(qk_tap_dance_state_t *state, void *user_data);
-static void       ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data);
-static void       ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data);
+static td_state_t cur_dance(tap_dance_state_t *state);
+static void       shift_sym_on_each_tap(tap_dance_state_t *state, void *user_data);
+static void       shift_sym_finished(tap_dance_state_t *state, void *user_data);
+static void       shift_sym_reset(tap_dance_state_t *state, void *user_data);
+static void       enter_ctrl_finished(tap_dance_state_t *state, void *user_data);
+static void       enter_ctrl_reset(tap_dance_state_t *state, void *user_data);
+static void       ctrl_alt_finished(tap_dance_state_t *state, void *user_data);
+static void       ctrl_alt_reset(tap_dance_state_t *state, void *user_data);
 static void       unregister_mods_and_clear_oneshot(uint8_t mods);
 static uint16_t   qmk_notify_u16le(const uint8_t *bytes);
 static uint16_t   qmk_notify_clamp_u16(uint16_t value, uint16_t min, uint16_t max);
@@ -171,8 +171,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
     [_ADJUST] = LAYOUT_reviung41(
-        RGB_VAI,     RGB_SAI, RGB_HUI, RGB_MOD, XXXXXXX, RGB_TOG,                    QWERTY,    COLEMAK, FPS,     DJMAX,   XXXXXXX,    XXXXXXX,
-        RGB_VAD,     RGB_SAD, RGB_HUD, RGB_RMOD, XXXXXXX, XXXXXXX,                   QK_RBT,    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,    XXXXXXX,
+        UG_VALU,     UG_SATU, UG_HUEU, UG_NEXT, XXXXXXX, UG_TOGG,                    QWERTY,    COLEMAK, FPS,     DJMAX,   XXXXXXX,    XXXXXXX,
+        UG_VALD,     UG_SATD, UG_HUED, UG_PREV, XXXXXXX, XXXXXXX,                   QK_RBT,    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,    XXXXXXX,
         XXXXXXX,     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                    QK_BOOT,   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,    XXXXXXX,
                                               _______,    _______,    XXXXXXX,        _______,    _______
     ),
@@ -199,7 +199,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // )
 };
 
-static td_state_t cur_dance(qk_tap_dance_state_t *state) {
+static td_state_t cur_dance(tap_dance_state_t *state) {
     if (state->count == 1) {
         if (state->pressed) {
             return TD_SINGLE_HOLD;
@@ -224,7 +224,7 @@ static td_state_t cur_dance(qk_tap_dance_state_t *state) {
     return TD_UNKNOWN;
 }
 
-static void shift_sym_on_each_tap(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_on_each_tap(tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
     if (state->count == 1) {
@@ -232,7 +232,7 @@ static void shift_sym_on_each_tap(qk_tap_dance_state_t *state, void *user_data) 
     }
 }
 
-static void shift_sym_finished(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_finished(tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
     shift_sym_state = cur_dance(state);
@@ -261,7 +261,7 @@ static void shift_sym_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-static void shift_sym_reset(qk_tap_dance_state_t *state, void *user_data) {
+static void shift_sym_reset(tap_dance_state_t *state, void *user_data) {
     (void)state;
     (void)user_data;
 
@@ -284,7 +284,7 @@ static void shift_sym_reset(qk_tap_dance_state_t *state, void *user_data) {
     shift_sym_state = TD_NONE;
 }
 
-static void enter_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
+static void enter_ctrl_finished(tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
     enter_ctrl_state = cur_dance(state);
@@ -301,7 +301,7 @@ static void enter_ctrl_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-static void enter_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
+static void enter_ctrl_reset(tap_dance_state_t *state, void *user_data) {
     (void)state;
     (void)user_data;
 
@@ -319,7 +319,7 @@ static void enter_ctrl_reset(qk_tap_dance_state_t *state, void *user_data) {
     enter_ctrl_state = TD_NONE;
 }
 
-static void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
+static void ctrl_alt_finished(tap_dance_state_t *state, void *user_data) {
     (void)user_data;
 
     ctrl_alt_state = cur_dance(state);
@@ -348,7 +348,7 @@ static void ctrl_alt_finished(qk_tap_dance_state_t *state, void *user_data) {
     }
 }
 
-static void ctrl_alt_reset(qk_tap_dance_state_t *state, void *user_data) {
+static void ctrl_alt_reset(tap_dance_state_t *state, void *user_data) {
     (void)state;
     (void)user_data;
 
@@ -502,7 +502,7 @@ static void qmk_notify_begin_rgb_at(const uint8_t *data, uint8_t length) {
         duration_ms = qmk_notify_u16le(data + 5);
     }
 
-    if (led_index >= RGBLED_NUM) {
+    if (led_index >= RGBLIGHT_LED_COUNT) {
         return;
     }
 
@@ -538,13 +538,13 @@ static void qmk_notify_apply_pending(void) {
     }
 
     rgblight_enable_noeeprom();
-    rgblight_set_clipping_range(0, RGBLED_NUM);
-    rgblight_set_effect_range(0, RGBLED_NUM);
+    rgblight_set_clipping_range(0, RGBLIGHT_LED_COUNT);
+    rgblight_set_effect_range(0, RGBLIGHT_LED_COUNT);
     rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
 
     if (rgb_pending_state.use_rgb) {
         if (rgb_pending_state.use_single_led) {
-            rgblight_setrgb_range(0, 0, 0, 0, RGBLED_NUM);
+            rgblight_setrgb_range(0, 0, 0, 0, RGBLIGHT_LED_COUNT);
             rgblight_setrgb_at(
                 rgb_pending_state.red,
                 rgb_pending_state.green,
@@ -568,11 +568,11 @@ static void qmk_notify_apply_pending(void) {
 
 static void qmk_notify_setrgb_active(uint8_t red, uint8_t green, uint8_t blue) {
 #ifdef RGBLIGHT_ENABLE
-    rgblight_setrgb_range(0, 0, 0, 0, RGBLED_NUM);
+    rgblight_setrgb_range(0, 0, 0, 0, RGBLIGHT_LED_COUNT);
 
     for (uint8_t i = 0; i < ARRAY_SIZE(qmk_notify_active_leds); i++) {
         uint8_t led_index = qmk_notify_active_leds[i];
-        if (led_index < RGBLED_NUM) {
+        if (led_index < RGBLIGHT_LED_COUNT) {
             rgblight_setrgb_at(red, green, blue, led_index);
         }
     }
@@ -657,7 +657,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     raw_hid_send(response, RAW_EPSIZE);
 }
 
-qk_tap_dance_action_t tap_dance_actions[] = {
+tap_dance_action_t tap_dance_actions[] = {
     [TD_SHIFT_SYM]  = ACTION_TAP_DANCE_FN_ADVANCED(shift_sym_on_each_tap, shift_sym_finished, shift_sym_reset),
     [TD_ENTER_CTRL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, enter_ctrl_finished, enter_ctrl_reset),
     [TD_CTRL_ALT]   = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ctrl_alt_finished, ctrl_alt_reset),
