@@ -1,17 +1,18 @@
 // Tests the actual callback bodies extracted from keymap.c by run.py.
 // This does not simulate QMK's event pipeline or resolve modifier ownership.
 #include "qmk_stub.h"
+#include "keycodes.h"
 
-#define KC_LCTL 0
-#define KC_LSFT 1
-#define KC_LALT 2
-#define KC_ENT 3
-#define MOD_BIT(k) (1u << (k))
+#define MOD_BIT(k) (1u << ((k) & 7))
 #define _SYM 2
 #define ONESHOT_START 1
 #define ONESHOT_PRESSED 1
 
-typedef struct { uint8_t count; bool pressed, interrupted; } tap_dance_state_t;
+typedef struct {
+    uint8_t count;
+    bool pressed, interrupted;
+    uint16_t interrupting_keycode;
+} tap_dance_state_t;
 static uint8_t pending_mods, held_mods;
 static uint16_t now;
 static bool oneshot_enabled = true;
@@ -75,7 +76,7 @@ int main(void) {
     pending_mods = ctrl;
     now = 20;
     shift_sym_timer = 0;
-    tap_dance_state_t state = {.count = 1, .pressed = true, .interrupted = true};
+    tap_dance_state_t state = {.count = 1, .pressed = true, .interrupted = true, .interrupting_keycode = KC_A};
     shift_sym_finished(&state, NULL);
     shift_sym_reset(&state, NULL);
     assert(pending_mods == (ctrl | shift) && held_mods == 0);

@@ -148,6 +148,16 @@ static void queue_oneshot_mods(uint8_t mods) {
     set_oneshot_mods(get_oneshot_mods() | mods);
 }
 
+static bool is_modifier_or_layer_key(uint16_t keycode) {
+    return IS_MODIFIER_KEYCODE(keycode) || IS_QK_MOD_TAP(keycode) ||
+           IS_QK_ONE_SHOT_MOD(keycode) || IS_QK_TAP_DANCE(keycode) ||
+           IS_QK_LAYER_TAP(keycode) || IS_QK_LAYER_MOD(keycode) ||
+           IS_QK_TO(keycode) || IS_QK_MOMENTARY(keycode) ||
+           IS_QK_DEF_LAYER(keycode) || IS_QK_TOGGLE_LAYER(keycode) ||
+           IS_QK_ONE_SHOT_LAYER(keycode) || IS_QK_LAYER_TAP_TOGGLE(keycode) ||
+           IS_QK_PERSISTENT_DEF_LAYER(keycode);
+}
+
 static td_state_t classify_tap_dance(const tap_dance_state_t *state) {
     if (state->count == 1) {
         if (state->pressed) {
@@ -186,10 +196,11 @@ static void shift_sym_finished(tap_dance_state_t *state, void *user_data) {
 
     shift_sym_state = classify_tap_dance(state);
 
-    // Treat a rapid rollover as one-shot Shift rather than a held modifier.
-
+    // Preserve the typing-rollover grace period, but never turn a held Shift
+    // into a one-shot merely because a layer/modifier key interrupted it.
     if (shift_sym_state == TD_SINGLE_HOLD &&
         state->interrupted &&
+        !is_modifier_or_layer_key(state->interrupting_keycode) &&
         timer_elapsed(shift_sym_timer) < SHIFT_HOLD_GRACE_MS) {
         shift_sym_state = TD_SINGLE_TAP;
     }

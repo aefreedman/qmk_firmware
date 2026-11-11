@@ -38,8 +38,17 @@ def main():
     with tempfile.TemporaryDirectory(prefix="reviung-tests-") as directory:
         build = Path(directory)
         (build / "tap_dance_under_test.inc").write_text(source, encoding="utf-8")
+        core = (repo / "quantum/process_keycode/process_tap_dance.c").read_text(encoding="utf-8")
+        # Exercise QMK's real interruption/finish/reset pipeline as well as our callbacks.
+        core_state = core.split("static uint16_t active_td;", 1)[1].split("void tap_dance_pair_on_each_tap", 1)[0]
+        core_events = core.split("static inline void _process_tap_dance_action_fn", 1)[1]
+        (build / "tap_dance_core_under_test.inc").write_text(
+            "static uint16_t active_td;" + core_state
+            + "static inline void _process_tap_dance_action_fn" + core_events, encoding="utf-8",
+        )
         cases = [
             ("tap_dances", "test_tap_dances.c", []),
+            ("tap_dance_events", "test_tap_dance_events.c", []),
         ]
         for name, filename, defines in cases:
             binary = build / (name + (".exe" if os.name == "nt" else ""))
